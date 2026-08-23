@@ -1,0 +1,77 @@
+publiccodeYmlVersion: "0.4"
+
+name: tpl-navette-dati
+url: "https://github.com/carlocapacci/tpl-navette-dati"
+softwareVersion: "1.0.0"
+releaseDate: "2026-08-23"
+platforms:
+  - web
+  - linux
+
+categories:
+  - data-analytics
+  - data-collection
+  - fleet-management
+
+developmentStatus: stable
+softwareType: standalone/web
+
+description:
+  it:
+    localisedName: Dati navette a guida autonoma
+    shortDescription: >-
+      Caricamento, analisi e archiviazione dei dati di funzionamento delle
+      navette a guida autonoma della sperimentazione TPL.
+    longDescription: >-
+      Applicazione web per la rendicontazione della sperimentazione del
+      trasporto pubblico locale a guida autonoma del Comune di Imperia. Riceve
+      gli archivi giornalieri prodotti dai computer di bordo delle navette, ne
+      verifica l'integrita', li analizza e calcola le grandezze assenti dai dati
+      grezzi (accelerazione, regime di rotazione, beccheggio), archivia
+      originali ed elaborati su storage S3 e produce un rapporto in PDF.
+
+      Il formato dei dati di bordo non e' documentato dal costruttore ed e'
+      stato ricostruito aprendo i file: i due computer di bordo esportano
+      insiemi di segnali diversi e non distinguibili dal nome dell'archivio,
+      alcune grandezze sono espresse in unita' di misura diverse da quelle
+      attese e un archivio giornaliero puo' contenere campioni di piu' giorni.
+      L'applicazione tiene conto di tutti questi aspetti.
+
+      Ogni azione finisce in un registro consultabile ed esportabile,
+      archiviato mensilmente. Gli accessi sono regolati da tre ruoli distinti.
+    features:
+      - Caricamento degli archivi con verifica di integrita' preventiva
+      - Riconoscimento del computer di bordo dai segnali presenti
+      - Calcolo di accelerazione, regime di rotazione e beccheggio
+      - Distinzione fra guida autonoma e manuale pesata sulla durata
+      - Archiviazione su storage S3 e consultazione in sola lettura
+      - Rapporti in PDF per singola elaborazione
+      - Registro delle attivita' con archiviazione mensile
+      - Sorveglianza della casella di posta della sperimentazione
+
+legal:
+  license: EUPL-1.2
+  mainCopyrightOwner: Comune di Imperia
+  repoOwner: Carlo Capacci
+
+maintenance:
+  type: contract
+  contractors:
+    - name: "Studio Capacci"
+      until: "2027-12-31"
+
+localisation:
+  localisationReady: false
+  availableLanguages:
+    - it
+
+it:
+  countryExtensionVersion: "1.0"
+  riuso:
+    codiceIPA: c_e290
+  piattaforme:
+    spid: false
+    cie: false
+    anpr: false
+    pagopa: false
+    io: false

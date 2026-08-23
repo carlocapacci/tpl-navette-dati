@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titolo %}Dati navette{% endblock %} &middot; TPL Imperia</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='stile.css') }}">
+</head>
+<body>
+<header>
+  <a class="marchio" href="{{ url_for('cruscotto') }}">
+    <strong>Navette a guida autonoma</strong>
+    <span>Comune di Imperia &middot; gestione dati sperimentazione</span>
+  </a>
+  {% if session.utente or accesso_libero() %}
+  <nav>
+    {# la freccia indica il ritorno: quando ci sei gia', non torna da nessuna parte #}
+    <a class="principale {% if request.endpoint == 'cruscotto' %}attivo{% endif %}"
+       href="{{ url_for('cruscotto') }}">{% if request.endpoint != 'cruscotto' %}&#9204; {% endif %}Cruscotto</a>
+    {% if ha_permesso('report.scarica') %}
+    <a href="{{ url_for('report') }}" {% if request.endpoint == 'report' %}class="attivo"{% endif %}>Report</a>
+    {% endif %}
+    {% if ha_permesso('dati.leggi') %}
+    <a href="{{ url_for('archivio') }}" {% if request.endpoint == 'archivio' %}class="attivo"{% endif %}>Archivio</a>
+    {% endif %}
+    {% if ha_permesso('casella.leggi') %}
+    <a href="{{ url_for('casella_sorveglianza') }}" {% if request.endpoint == 'casella_sorveglianza' %}class="attivo"{% endif %}>Casella</a>
+    {% endif %}
+    {% if ha_permesso('registro.leggi') %}
+    <a href="{{ url_for('registro') }}" {% if request.endpoint == 'registro' %}class="attivo"{% endif %}>Registro</a>
+    {% endif %}
+    {% if ha_permesso('utenti.gestione') %}
+    <a href="{{ url_for('utenti') }}" {% if request.endpoint == 'utenti' %}class="attivo"{% endif %}>Utenti</a>
+    {% endif %}
+    {% if session.utente %}
+      <span class="chi">{{ session.utente }}</span>
+      <a href="{{ url_for('cambia_password') }}">Password</a>
+      <a class="esci" href="{{ url_for('uscita') }}">Esci</a>
+    {% else %}
+      <span class="chi">accesso consentito per indirizzo IP</span>
+    {% endif %}
+  </nav>
+  {% endif %}
+</header>
+
+<main>
+  {% with messaggi = get_flashed_messages(with_categories=true) %}
+    {% for categoria, testo in messaggi %}
+      <div class="avviso {{ categoria }}">{{ testo }}</div>
+    {% endfor %}
+  {% endwith %}
+  {% block contenuto %}{% endblock %}
+</main>
+
+<footer>
+  <strong>Comune di Imperia</strong><br>
+  Viale Giacomo Matteotti, 157 &middot; 18100 Imperia (IM)<br>
+  Centralino: 0183 701 1 &middot; Partita IVA: 00089700082
+  <span class="crediti">
+    Manuale d'uso:
+    <a href="{{ url_for('scarica_manuale', lingua='it') }}">italiano</a> &middot;
+    <a href="{{ url_for('scarica_manuale', lingua='en') }}">english</a>
+    <br>
+    Software Architect: Ing. Carlo Capacci &middot; Software Coder: Claude.ai
+  </span>
+</footer>
+{% block coda %}{% endblock %}
+</body>
+</html>
