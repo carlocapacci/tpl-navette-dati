@@ -80,6 +80,7 @@ darebbe altrimenti percentuali prive di senso.
 | `posta.py`, `manuale.py` | invii e manuale d'uso |
 | `dispositivi.py` | telefoni di bordo abilitati a leggere i codici di salita |
 | `deploy/` | unità systemd, vhost, logrotate, fail2ban, servizio di supporto |
+| `inbox-watch/` | sorveglianza della casella: programma a se', gira da cron |
 
 ## Note di esercizio
 
@@ -104,8 +105,9 @@ organizza il servizio, non a chi amministra la macchina.
 
 **Casella** mostra l'esito della sorveglianza della casella di posta indicata
 ai cittadini e consente di gestire chi riceve gli avvisi. La sorveglianza è un
-programma a sé; qui se ne legge soltanto il file di stato, così l'interfaccia
-non può disallineare il cursore dei messaggi già notificati.
+programma a sé, che sta in `inbox-watch/`; qui se ne legge soltanto il file di
+stato, così l'interfaccia non può disallineare il cursore dei messaggi già
+notificati.
 
 **Dispositivi** registra i telefoni di servizio abilitati a leggere i codici di
 salita, mostrando a video il codice QR di abbinamento. La logica non è
