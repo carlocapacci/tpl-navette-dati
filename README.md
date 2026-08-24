@@ -78,7 +78,8 @@ darebbe altrimenti percentuali prive di senso.
 | `archivio_registro.py` | archiviazione mensile del registro attività |
 | `db.py`, `permessi.py` | utenze, ruoli, registro |
 | `posta.py`, `manuale.py` | invii e manuale d'uso |
-| `deploy/` | unità systemd, vhost, logrotate, fail2ban, installazione |
+| `dispositivi.py` | telefoni di bordo abilitati a leggere i codici di salita |
+| `deploy/` | unità systemd, vhost, logrotate, fail2ban, servizio di supporto |
 
 ## Note di esercizio
 
@@ -94,6 +95,35 @@ all'origine.
 I duplicati si riconoscono dall'impronta **SHA-256 del contenuto**, non dal
 nome: un file rinominato resta riconoscibile e l'ordine di caricamento non
 conta.
+
+## Due funzioni che escono dai dati
+
+Oltre all'analisi, l'applicazione fa da interfaccia a due cose che altrimenti
+richiederebbero di entrare sul server. Sono operazioni che spettano a chi
+organizza il servizio, non a chi amministra la macchina.
+
+**Casella** mostra l'esito della sorveglianza della casella di posta indicata
+ai cittadini e consente di gestire chi riceve gli avvisi. La sorveglianza è un
+programma a sé; qui se ne legge soltanto il file di stato, così l'interfaccia
+non può disallineare il cursore dei messaggi già notificati.
+
+**Dispositivi** registra i telefoni di servizio abilitati a leggere i codici di
+salita, mostrando a video il codice QR di abbinamento. La logica non è
+duplicata: si richiama il comando che l'applicazione di bordo già espone.
+
+Quest'ultima merita una nota di architettura. L'applicazione gira con
+`NoNewPrivileges`, quindi non può elevare i privilegi né richiamare da sola quel
+comando — e quella protezione non va tolta per una funzione usata qualche volta
+l'anno, visto che l'applicazione riceve caricamenti da rete. Deposita invece la
+richiesta in una cartella condivisa, dove il servizio di supporto
+(`deploy/tpl-dispositivi-agente.py`) la esegue e lascia la risposta:
+l'applicazione non acquista nuovi poteri, ottiene una risposta. Il servizio
+accetta solo le operazioni previste e ne verifica gli argomenti.
+
+Il fondo pagina espone inoltre, a chi ne ha bisogno, il manuale
+dell'applicazione, quelli per i passeggeri nelle quattro lingue, la guida per il
+personale di bordo e la locandina per le fermate: si aggiornano sostituendo il
+file nella cartella dei dati, senza ricompilare nulla.
 
 ## Configurazione
 
