@@ -54,6 +54,8 @@ from . import (
     permessi,
     pipeline,
     posta,
+    rapporti,
+    statistiche,
 )
 
 logger = logging.getLogger("tpl.app")
@@ -250,6 +252,7 @@ app.jinja_env.globals["accesso_libero"] = accesso_libero
 # il template NASCONDE cio' che l'utente non puo' fare; a impedirlo davvero e'
 # il decoratore sulla rotta, non questo
 app.jinja_env.globals["ha_permesso"] = _ha_permesso
+app.jinja_env.globals["informative_passeggeri"] = lambda: informative_disponibili()
 app.jinja_env.globals["manuali_passeggeri"] = lambda: manuali_passeggeri_disponibili()
 app.jinja_env.globals["guida_bordo"] = lambda: guida_bordo_disponibile()
 app.jinja_env.globals["locandina"] = lambda: locandina_disponibile()
@@ -696,6 +699,19 @@ MANUALI_PASSEGGERI = {
     "en": "Manuale Utente App Bus a Guida Autonoma - EN.pdf",
     "fr": "Manuale Utente App Bus a Guida Autonoma - FR.pdf",
     "de": "Manuale Utente App Bus a Guida Autonoma - DE.pdf",
+    "es": "Manuale Utente App Bus a Guida Autonoma - ES.pdf",
+}
+
+# Le due informative che il passeggero accetta prima di salire: i rischi e le
+# modalita' della sperimentazione, ai sensi del D.M. 70/2018, e il trattamento
+# dei dati personali. Stanno accanto ai manuali perche' chi le cerca dopo la
+# registrazione le trova dove si aspetta di trovarle.
+INFORMATIVE_PASSEGGERI = {
+    "it": "Informative Passeggeri Bus a Guida Autonoma.pdf",
+    "en": "Informative Passeggeri Bus a Guida Autonoma - EN.pdf",
+    "fr": "Informative Passeggeri Bus a Guida Autonoma - FR.pdf",
+    "de": "Informative Passeggeri Bus a Guida Autonoma - DE.pdf",
+    "es": "Informative Passeggeri Bus a Guida Autonoma - ES.pdf",
 }
 
 # Foglio di una pagina per chi sta a bordo: come registrare le salite e come
@@ -730,6 +746,32 @@ def scarica_manuale_passeggeri(lingua: str):
         mimetype="application/pdf",
         as_attachment=False,
         download_name=f"manuale-passeggeri-{lingua}.pdf",
+    )
+
+
+def informative_disponibili() -> list:
+    """Lingue per cui l'informativa esiste davvero."""
+    cartella = cartella_manuali()
+    return [
+        l for l, nome in INFORMATIVE_PASSEGGERI.items()
+        if (cartella / nome).exists()
+    ]
+
+
+@app.route("/informativa/passeggeri/<lingua>.pdf")
+def scarica_informativa_passeggeri(lingua: str):
+    """Informative per i passeggeri. Pubbliche, come i manuali."""
+    nome = INFORMATIVE_PASSEGGERI.get(lingua)
+    if not nome:
+        abort(404)
+    percorso = cartella_manuali() / nome
+    if not percorso.exists():
+        abort(404)
+    return send_file(
+        percorso,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"informative-passeggeri-{lingua}.pdf",
     )
 
 
@@ -887,6 +929,102 @@ def esporta_registro():
         as_attachment=True,
         download_name=f"registro-navette-{oggi}.csv",
     )
+
+
+@app.route("/statistiche")
+@richiede_permesso(permessi.LEGGE_STATISTICHE)
+def statistiche_sperimentazione():
+    """Numeri della sperimentazione, letti dai dati anonimi dei passeggeri.
+
+    Se il database dell'applicazione di bordo non risponde la pagina si apre
+    lo stesso e lo dice: e' un servizio di un altro programma, e un guasto li'
+    non deve somigliare a un guasto qui.
+    """
+    try:
+        dati = statistiche.raccogli()
+        errore = None
+    except statistiche.DatiNonDisponibili as guasto:
+        logger.warning(
+            "statistiche non disponibili",
+            extra={"context": {"causa": str(guasto)}})
+        dati, errore = None, str(guasto)
+    return render_template(
+        "statistiche.html", dati=dati, errore=errore,
+        destinatari=rapporti.leggi_destinatari(), cadenze=rapporti.CADENZE)
+
+
+@app.route("/statistiche/destinatari", methods=["POST"])
+@richiede_permesso(permessi.LEGGE_STATISTICHE)
+def statistiche_destinatari():
+    """Aggiunge, modifica o rimuove chi riceve i rapporti periodici."""
+    _verifica_gettone()
+    azione = (request.form.get("azione") or "").strip()
+    indirizzo = (request.form.get("indirizzo") or "").strip()
+    cadenze = request.form.getlist("cadenze")
+    nota = (request.form.get("nota") or "").strip()
+
+    try:
+        if azione == "aggiungi":
+            esito = rapporti.aggiungi(indirizzo, cadenze, nota)
+        elif azione == "modifica":
+            esito = rapporti.modifica(indirizzo, cadenze, nota)
+        elif azione == "elimina":
+            esito = rapporti.elimina(indirizzo)
+        else:
+            raise ValueError("Azione non riconosciuta.")
+    except ValueError as errore:
+        flash(str(errore), "attenzione")
+        db.registra(
+            "rapporti.destinatari",
+            utente=session.get("utente", ""),
+            esito="rifiutato",
+            dettaglio=f"{azione}: {errore}",
+            indirizzo_ip=_ip(),
+        )
+    else:
+        flash(esito, "esito")
+        db.registra(
+            "rapporti.destinatari",
+            utente=session.get("utente", ""),
+            esito="eseguito",
+            dettaglio=f"{azione}: {indirizzo}",
+            indirizzo_ip=_ip(),
+        )
+
+    return redirect(url_for("statistiche_sperimentazione"))
+
+
+@app.route("/statistiche.pdf")
+@richiede_permesso(permessi.LEGGE_STATISTICHE)
+def statistiche_pdf():
+    """Le stesse statistiche in un foglio A4, da allegare a una relazione.
+
+    L'impaginato e' un altro: la pagina ha il menu e i riquadri affiancati,
+    qui serve un documento che si stampi e si archivi. I numeri sono gli
+    stessi, letti nello stesso momento.
+    """
+    from weasyprint import HTML
+
+    try:
+        dati = statistiche.raccogli()
+    except statistiche.DatiNonDisponibili as guasto:
+        logger.warning(
+            "statistiche non disponibili",
+            extra={"context": {"causa": str(guasto)}})
+        abort(503)
+
+    documento = render_template("statistiche_pdf.html", dati=dati)
+    # La base serve a weasyprint per trovare l'immagine della mappa, che sta
+    # fra i file statici e nel documento e' indicata per nome.
+    base = str(Path(app.static_folder).resolve()) + "/"
+    pdf = HTML(string=documento, base_url=base).write_pdf()
+
+    quando = datetime.now().strftime("%Y%m%d")
+    risposta = make_response(pdf)
+    risposta.headers["Content-Type"] = "application/pdf"
+    risposta.headers["Content-Disposition"] = (
+        f'attachment; filename="statistiche-sperimentazione-{quando}.pdf"')
+    return risposta
 
 
 @app.route("/casella")
